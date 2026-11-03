@@ -100,10 +100,12 @@ function init(name, url) {
   const target = url || 'https://example.com/';
   for (const f of fs.readdirSync(tpl)) {
     const text = fs.readFileSync(path.join(tpl, f), 'utf8').replace(/__URL__/g, target).replace(/__NAME__/g, path.basename(dir));
-    fs.writeFileSync(path.join(dir, f), text);
+    // Why: npm leaves .gitignore files out of published packages, so the template keeps it as "gitignore".
+    fs.writeFileSync(path.join(dir, f === 'gitignore' ? '.gitignore' : f), text);
   }
   const rel = (path.relative(process.cwd(), dir) || '.').split(path.sep).join('/');
   console.log(`Made ${rel}/ with narration.json (what to say) and flow.cjs (what to do), for ${target}`);
+  console.log('Its .gitignore keeps the generated audio, build files and video out of git.');
   console.log(`\nTry it now:\n  npx demo-video-kit run ${rel} --open\n\nThen edit both files for your workflow; each segment "id" in one matches a segment() in the other.`);
 }
 

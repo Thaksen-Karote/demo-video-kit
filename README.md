@@ -45,6 +45,32 @@ npx demo-video-kit doctor
 
 `--from render` reuses the earlier recording, which is handy when only subtitles or encoding changed. The video is `<demo>/<demo>.mp4`.
 
+## What goes where
+
+You write only two files per demo; everything else is made by the kit:
+
+```
+your-project/
+├── demos/
+│   └── signup/
+│       ├── narration.json   ← you write: what the voice says
+│       ├── flow.cjs         ← you write: what to click and type
+│       ├── .gitignore       ← from init: keeps the files below out of git
+│       ├── audio/  build/  subtitles.srt  scene-timeline.json
+│       └── signup.mp4       ← the video
+└── node_modules/demo-video-kit/   ← the kit (never edited)
+```
+
+Commit `narration.json` and `flow.cjs`; anyone can make the same video again with `npx demo-video-kit run demos/signup`.
+
+## Versions
+
+Pin a release so a later change can't break your demos:
+
+```bash
+npm install --save-dev github:Thaksen-Karote/demo-video-kit#v0.2.0
+```
+
 ## Write your own demo
 
 **`narration.json`** has one segment per step:

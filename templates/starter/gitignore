@@ -1,0 +1,7 @@
+# Made by demo-video-kit on every run; keep only narration.json and flow.cjs in git.
+audio/
+build/
+*.mp4
+subtitles.srt
+scene-timeline.json
+narration-script.txt
