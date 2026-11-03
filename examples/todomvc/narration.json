@@ -1,0 +1,35 @@
+{
+  "title": "TodoMVC demo",
+  "voice": "en-IN-NeerjaNeural",
+  "rate": "-4%",
+  "pronounce": {
+    "TodoMVC": "Todo M V C"
+  },
+  "segments": [
+    {
+      "id": "s1-intro",
+      "scene": "Scene 1: The app",
+      "text": "This is TodoMVC, a small to-do list app. In this short demo we'll add three tasks, complete one of them, and filter the list."
+    },
+    {
+      "id": "s2-add",
+      "scene": "Scene 2: Add tasks",
+      "text": "We type each task into the box at the top and press Enter. Here are three tasks for the week: buy groceries, write the project README, and book a dentist appointment."
+    },
+    {
+      "id": "s3-complete",
+      "scene": "Scene 3: Complete a task",
+      "text": "The README is finished, so we tick its checkbox. The task is crossed out, and the counter at the bottom now shows two items left."
+    },
+    {
+      "id": "s4-filter",
+      "scene": "Scene 4: Filter",
+      "text": "The filters at the bottom choose what the list shows. Active shows only the tasks still to do, and Completed shows the finished ones."
+    },
+    {
+      "id": "s5-end",
+      "scene": "Scene 5: Done",
+      "text": "Back on All, every task is listed again. That's the whole workflow: add, complete and filter."
+    }
+  ]
+}

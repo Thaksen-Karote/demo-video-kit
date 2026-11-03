@@ -1,0 +1,10 @@
+{
+  "name": "demo-video-kit",
+  "version": "0.1.0",
+  "description": "Narrated, subtitled 1080p demo videos of web app workflows, with Playwright and Edge TTS",
+  "license": "MIT",
+  "private": true,
+  "dependencies": {
+    "playwright-core": "1.63.0"
+  }
+}
