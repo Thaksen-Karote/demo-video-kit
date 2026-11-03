@@ -3,13 +3,9 @@
  * Copy this folder and narration.json for your own app, and change the steps.
  *
  * From the repository root:
- *   python scripts/generate_audio.py examples/todomvc
- *   node examples/todomvc/flow.cjs
- *   python scripts/render.py examples/todomvc
- *   python scripts/verify.py examples/todomvc
+ *   npx demo-video-kit run examples/todomvc --open     (or: npm run example)
  */
-const path = require('path');
-const { runDemo } = require(process.env.DEMO_KIT || path.join(__dirname, '..', '..', 'scripts', 'demo-kit.cjs'));
+const { runDemo } = require(process.env.DEMO_KIT || 'demo-video-kit');
 
 const URL = process.env.DEMO_BASE_URL || 'https://demo.playwright.dev/todomvc/';
 const TASKS = ['Buy groceries', 'Write the project README', 'Book a dentist appointment'];

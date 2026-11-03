@@ -1,0 +1,23 @@
+{
+  "title": "__NAME__ demo",
+  "voice": "en-IN-NeerjaNeural",
+  "rate": "-4%",
+  "pronounce": {},
+  "segments": [
+    {
+      "id": "s1-intro",
+      "scene": "Scene 1: The home page",
+      "text": "Welcome. This short demo was made with demo video kit. This is the first page of the app."
+    },
+    {
+      "id": "s2-explore",
+      "scene": "Scene 2: Look around",
+      "text": "Let's scroll down to see the rest of the page. Each segment of narration plays while its actions run, so the voice always matches what is on screen."
+    },
+    {
+      "id": "s3-end",
+      "scene": "Scene 3: Done",
+      "text": "And back to the top. To make your own demo, edit narration dot json for the words and flow dot c j s for the clicks."
+    }
+  ]
+}

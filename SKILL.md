@@ -5,9 +5,9 @@ description: Record a narrated, subtitled demo video of a real web app workflow 
 
 # Demo video
 
-Records the real application (never a mock or an old video) in a fresh headless browser, narrates it with Edge TTS, burns in subtitles, and renders an MP4. A demo is two files written for its process, `narration.json` and `flow.cjs`; everything else is shared in `scripts/`. The worked example is `examples/todomvc/`.
+Records the real application (never a mock or an old video) in a fresh headless browser, narrates it with Edge TTS, burns in subtitles, and renders an MP4. A demo is two files written for its process, `narration.json` and `flow.cjs`; everything else is the `demo-video-kit` command in this folder. The worked example is `examples/todomvc/`.
 
-`<skill>` below is this folder (for example `~/.claude/skills/demo-video`).
+`<kit>` below means `node <this folder>/bin/demo-video-kit.js` (this folder is, for example, `~/.claude/skills/demo-video`); when the user's project has the kit installed, `npx demo-video-kit` works the same. `<kit> help` lists every command.
 
 ## The request decides the job
 
@@ -15,7 +15,7 @@ Records the real application (never a mock or an old video) in a fresh headless 
 | --- | --- |
 | "Create a demo for <process>" | The whole workflow below, in `demos/<process>/` of the user's project |
 | "<process> screens changed, redo the demo" | Dry-run the new screens (step 2), fix `flow.cjs` and, if the words no longer fit, `narration.json`; then steps 4 to 8 |
-| "Add boxes to the existing <process> video" (no new recording) | Measure the boxes in the running app, write `annotations.json`, run `scripts/annotate.py` (see Highlights) |
+| "Add boxes to the existing <process> video" (no new recording) | Measure the boxes in the running app, write `annotations.json`, run `<kit> annotate <demo-dir>` (see Highlights) |
 | "... without highlights" | Leave out every `highlight` option; nothing else changes |
 | "Change the voice / speed / wording" | Edit `narration.json` (`voice`, `rate`, segment `text`), then steps 4 to 8: the clip lengths drive the on-screen timing, so the video is always recorded again |
 
@@ -24,7 +24,7 @@ Records the real application (never a mock or an old video) in a fresh headless 
 1. **Real and fresh.** A new browser session; the real application; real data. Never fake a result, a number or a status; announce success only after the application shows it.
 2. **Safe.** Only a local or test environment: every run really creates whatever the flow creates. Never print or store credentials: they come from the environment (for example `DEMO_EMAIL`, `DEMO_PASSWORD`); a password shows only as dots. Ask for a test account if none is known.
 3. **Picture.** 1920x1080, 16:9, 30 fps, H.264 + AAC MP4, recorded headless so nothing is cut. A visible cursor that glides to each target and a light click ring; no zoom, no camera moves, no fancy transitions. Before acting on anything, scroll it fully into view; read long pages top to bottom, slowly enough to read.
-4. **Sound.** Edge TTS, default voice `en-IN-NeerjaNeural` (list others with `python -m edge_tts --list-voices`). One clip per narration segment; clips never overlap; narration describes only what is on screen or about to happen in that scene.
+4. **Sound.** Edge TTS, default voice `en-IN-NeerjaNeural` (list others with `<kit> voices en-` or another filter). One clip per narration segment; clips never overlap; narration describes only what is on screen or about to happen in that scene.
 5. **No gap longer than 7 seconds.** No stretch without narration may reach 7 seconds. When the recorder warns, or `verify.py` fails, lengthen or split that segment's narration, or speed up its actions, and record again.
 6. **Pace.** No rushing: every value entered must be visible before moving on.
 7. **Follow the application.** Derive routes, labels and buttons from the running app (dry run), never from memory. Name buttons as the app does.
@@ -41,31 +41,22 @@ API in `flow.cjs`:
 - A box stays until the cursor moves to the next target. `{ keep: true }` keeps the current boxes as well; `k.clearHighlights()` removes them; `k.highlight(loc)` adds one without moving the cursor.
 - Each box adds a `highlight` entry to `marks` in `build/timeline-raw.json`.
 
-For a video already recorded without boxes, `scripts/annotate.py <demo-dir>` draws them afterwards from `annotations.json`. This is a fallback; recording again is easier and more accurate.
+For a video already recorded without boxes, `<kit> annotate <demo-dir>` draws them afterwards from `annotations.json`. This is a fallback; recording again is easier and more accurate.
 
 ## Workflow
 
-1. **Setup.** Check the tools (see Setup) and that the app answers at its URL.
+1. **Setup.** Run `<kit> doctor` (see Setup) and check that the app answers at its URL.
 2. **Dry run.** With the Playwright browser tools, walk the real flow without recording and without the final submit: note each screen's route, labels and `getByRole` names, dropdown options, dialogs, the final button, and what happens after it.
-3. **Write the demo**, copying `examples/todomvc/`:
+3. **Write the demo**: `<kit> init <demo-dir> --url <app url>` makes a starter that already runs; or copy `examples/todomvc/`. Then edit:
    - `narration.json`: title, voice, rate, `pronounce` (written → spoken), and segments `{id, scene, text}`. Split a scene into several segments wherever its actions take long, so each segment's narration lasts about as long as its actions.
-   - `flow.cjs`: `runDemo(__dirname, async (k) => { ... })` with one `k.segment(id, async (at, clip) => { ... })` per narration segment. Use `k.click / k.type / k.pick / k.goto / k.scrollBy`; `at(seconds)` waits for a point in the clip (for example `clip.cues[0].end`). Wait on elements, never on "network idle". Return what was verified. Point `require` at `<skill>/scripts/demo-kit.cjs`, or set `DEMO_KIT`.
-4. **Audio.** `python <skill>/scripts/generate_audio.py <demo-dir>`
-5. **Record.** `node <demo-dir>/flow.cjs` (with `DEMO_BASE_URL` and any credentials in the environment). Each `WARNING` line breaks rule 5: fix and record again.
-6. **Render.** `python <skill>/scripts/render.py <demo-dir>`
-7. **Verify.** `python <skill>/scripts/verify.py <demo-dir>` must pass. Then look at `build/check/contact-sheet.png`: every frame shows the full screen, the cursor, the right step, readable subtitles, and boxes on the elements the narration names.
-8. **Hand over.** Report the MP4 path, duration, format, longest gap, what the run created, and anything that differs from the request because the app works differently.
+   - `flow.cjs`: `runDemo(__dirname, async (k) => { ... })` with one `k.segment(id, async (at, clip) => { ... })` per narration segment. Use `k.click / k.type / k.pick / k.goto / k.scrollBy`; `at(seconds)` waits for a point in the clip (for example `clip.cues[0].end`). Wait on elements, never on "network idle". Return what was verified. Keep `require(process.env.DEMO_KIT || 'demo-video-kit')`: the command sets `DEMO_KIT`.
+4. **Make it.** `<kit> run <demo-dir>` (with `DEMO_BASE_URL` and any credentials in the environment) runs audio, record, render and verify. Each `WARNING` line from the recorder, and each `FAIL` line from verify, breaks rule 5: fix and run again. After changing only `flow.cjs`, `--from record` skips the audio; after changing only subtitles or encoding, `--from render` skips the recording.
+5. **Look at it.** `build/check/contact-sheet.png`: every frame shows the full screen, the cursor, the right step, readable subtitles, and boxes on the elements the narration names. The video is `<demo-dir>/<folder name>.mp4`.
+6. **Hand over.** Report the MP4 path, duration, format, longest gap, what the run created, and anything that differs from the request because the app works differently.
 
 ## Setup
 
-| Need | Check | If missing |
-| --- | --- | --- |
-| Python packages `edge-tts`, `imageio-ffmpeg` | `python -c "import edge_tts, imageio_ffmpeg"` | `python -m pip install --user edge-tts imageio-ffmpeg` |
-| `playwright-core` | `node -e "require('<skill>/node_modules/playwright-core')"` | `npm install` in this folder |
-| Playwright's ffmpeg | first recording fails with an ffmpeg error | `node <skill>/node_modules/playwright-core/cli.js install ffmpeg` |
-| Google Chrome | the recorder launches `channel: 'chrome'` | install Chrome |
-
-Edge TTS needs internet access.
+Node 18+ and Google Chrome (or Microsoft Edge: the recorder falls back to it, or set `DEMO_BROWSER=msedge`). Run `npm install` once in this folder; the voices (`msedge-tts`), ffmpeg (`ffmpeg-static`) and `playwright-core` come with it, and the recorder fetches Playwright's own small ffmpeg on its first run. `<kit> doctor` checks all of it, including internet access, which the voices need.
 
 ## Known traps
 

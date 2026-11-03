@@ -1,43 +1,51 @@
 # demo-video-kit
 
-Turn a web app workflow into a narrated, subtitled 1080p demo video, automatically.
+Turn a web app workflow into a narrated, subtitled 1080p demo video with one command.
 
-You write two small files: **what to say** (`narration.json`) and **what to click** (`flow.cjs`). The kit records the real app in headless Chrome, with a visible cursor, click ripples and red highlight boxes, then voices the narration with Edge TTS, times every action to the voice, burns in subtitles, and renders an MP4. It also checks the result.
+```bash
+npx demo-video-kit init demos/signup --url http://localhost:3000
+npx demo-video-kit run demos/signup --open
+```
 
-It also works as a [Claude Code](https://claude.com/claude-code) **skill**: ask Claude "create a demo video of the checkout flow" and it does the dry run, writes the two files, records, renders and verifies.
+You write two small files: **what to say** (`narration.json`) and **what to do** (`flow.cjs`). The kit records the real app in headless Chrome with a visible cursor, click ripples and red highlight boxes. It voices the narration with free Edge neural voices, times every action to the voice, burns in subtitles, renders an MP4 and checks it.
+
+It's only Node: no Python, no ffmpeg install, no API key. It also ships as a [Claude Code](https://claude.com/claude-code) **skill**, so an AI agent can write the two files for you.
 
 ## Features
 
 - True 1920x1080, 30 fps, H.264 + AAC, recorded headless so nothing gets cut off
-- Smooth, visible cursor with click ripples
-- Live red boxes on what the narration talks about; they follow scrolling
-- Neural voices from Edge TTS (free, no API key), with a pronunciation map
+- A smooth, visible cursor with click ripples
+- Live red boxes on whatever the narration talks about; they follow scrolling
+- 300+ neural voices in many languages, with a pronunciation map
 - Actions synced to each sentence of the narration; clips never overlap
-- `verify.py` fails any video with more than 7 s of silence, and makes a contact sheet to check by eye
+- A built-in check: fails any video with 7 s or more of silence, and makes a contact sheet to look at
 
-## Quick start
+## Install
 
-Needs Node 18+, Python 3.10+, Google Chrome and internet access (for the voices).
+You need **Node 18+** and **Google Chrome** (or Microsoft Edge). Everything else comes with the package.
 
 ```bash
-git clone https://github.com/Thaksen-Karote/demo-video-kit.git
-cd demo-video-kit
-npm install
-python -m pip install edge-tts imageio-ffmpeg
-node node_modules/playwright-core/cli.js install ffmpeg
+# in your project
+npm install --save-dev github:Thaksen-Karote/demo-video-kit
 
-# The bundled example: the public TodoMVC app
-python scripts/generate_audio.py examples/todomvc   # 1. narration -> audio clips
-node examples/todomvc/flow.cjs                       # 2. record the browser
-python scripts/render.py examples/todomvc            # 3. video + voice + subtitles -> MP4
-python scripts/verify.py examples/todomvc            # 4. check format, gaps, contact sheet
+# check the machine
+npx demo-video-kit doctor
 ```
 
-Result: `examples/todomvc/todomvc-final.mp4`.
+## Commands
 
-## Make your own demo
+| Command | Does |
+|---|---|
+| `init <demo> [--url <url>]` | Makes a starter demo folder that already works on that page |
+| `run <demo> [--from <step>] [--open]` | Makes the video: audio → record → render → verify |
+| `audio` / `record` / `render` / `verify <demo>` | One step on its own |
+| `voices [filter]` | Lists voices, e.g. `voices hi-IN` |
+| `doctor` | Checks Node, ffmpeg, the browser and the voices |
+| `annotate <demo>` | Draws boxes on an already-made video from `annotations.json` (fallback) |
 
-Copy `examples/todomvc/` and edit both files.
+`--from render` reuses the earlier recording, which is handy when only subtitles or encoding changed. The video is `<demo>/<demo>.mp4`.
+
+## Write your own demo
 
 **`narration.json`** has one segment per step:
 
@@ -47,24 +55,44 @@ Copy `examples/todomvc/` and edit both files.
   "rate": "-4%",
   "pronounce": { "TodoMVC": "Todo M V C" },
   "segments": [
-    { "id": "s1-intro", "scene": "Scene 1: The app", "text": "This is TodoMVC..." }
+    { "id": "s1-login", "scene": "Sign in", "text": "We start by signing in with a test account." }
   ]
 }
 ```
 
-**`flow.cjs`** gives each segment the actions to run while its narration plays:
+**`flow.cjs`** has the actions for each segment, which run while its narration plays:
 
 ```js
-await segment('s3-complete', async (at, clip) => {
-  await click(item('Write the README').getByRole('checkbox'), { highlight: true });
-  await at(clip.cues[0].end);            // wait for the end of the first sentence
-  await goto(page.getByTestId('todo-count'), { highlight: true });
+const { runDemo } = require(process.env.DEMO_KIT || 'demo-video-kit');
+
+runDemo(__dirname, async ({ p, env, segment, click, type }) => {
+  await p.goto(process.env.DEMO_BASE_URL || 'http://localhost:3000/login');
+  await segment('s1-login', async (at, clip) => {
+    await type(p.getByLabel('Email'), env.DEMO_EMAIL);
+    await type(p.getByLabel('Password'), env.DEMO_PASSWORD);
+    await at(clip.cues[0].end);                 // wait for the end of the first sentence
+    await click(p.getByRole('button', { name: 'Sign in' }), { highlight: true });
+  });
 });
 ```
 
-Helpers: `goto`, `click`, `type`, `pick` (dropdowns), `scrollBy`, `highlight`, `clearHighlights`, `pause`, `mark`. Set `DEMO_BASE_URL` for your app, and pass any credentials through environment variables; they are never written to a file.
+The helpers are `goto`, `click`, `type`, `pick` (dropdowns), `scrollBy`, `highlight`, `clearHighlights`, `pause` and `mark`. To find locators, click through your app with `npx playwright codegen <url>` and copy what it writes.
 
-List the voices with `python -m edge_tts --list-voices`.
+Pass credentials in environment variables; they are never written to a file. See [`examples/todomvc`](examples/todomvc) for a complete demo against a public site:
+
+```bash
+git clone https://github.com/Thaksen-Karote/demo-video-kit.git && cd demo-video-kit
+npm install
+npm run example
+```
+
+## Use from code
+
+```js
+const { generateAudio, record, render, verify } = require('demo-video-kit');
+await generateAudio('demos/signup'); record('demos/signup'); render('demos/signup');
+const { ok, problems } = verify('demos/signup');
+```
 
 ## Use as a Claude Code skill
 
@@ -78,23 +106,27 @@ Then ask Claude Code: *"Create a demo video of signing up on localhost:3000."* `
 ## How it works
 
 ```
-narration.json ──generate_audio.py──▶ audio/*.mp3 + sentence timings
-                                             │
-flow.cjs + demo-kit.cjs ──record──▶ build/raw/*.webm + timeline-raw.json
-                                             │
-                     render.py ──▶ subtitles.srt + <name>-final.mp4
-                                             │
-                     verify.py ──▶ pass/fail + build/check/contact-sheet.png
+narration.json ── audio ──▶ audio/*.mp3 + sentence timings      (Edge TTS)
+flow.cjs ──────── record ─▶ build/raw/*.webm + timeline         (Playwright, headless Chrome)
+                  render ─▶ subtitles.srt + <demo>.mp4          (ffmpeg)
+                  verify ─▶ pass/fail + build/check/contact-sheet.png
+```
+
+## Develop
+
+```bash
+npm test          # fast unit tests, no browser
+npm run example   # the full pipeline on examples/todomvc
 ```
 
 ## Roadmap
 
-- [ ] One command: `npx demo-video-kit run <demo-dir>`
+- [x] One command, Node only
+- [ ] `demo.yaml`: say and do in one file, no JavaScript
+- [ ] `record`: click through the app once and get the flow written for you
 - [ ] Zoom and pan on small UIs
 - [ ] GIF and vertical (9:16) export
-- [ ] Intro and outro title cards, chapter markers
-- [ ] Draft a `flow.cjs` from a `playwright codegen` recording
-- [ ] CI that renders the example on every push
+- [ ] Publish on npm; a GitHub Action that re-renders on every release
 
 ## License
 

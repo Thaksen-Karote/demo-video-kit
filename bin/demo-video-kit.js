@@ -1,0 +1,156 @@
+#!/usr/bin/env node
+/**
+ * The demo-video-kit command.
+ *
+ *   demo-video-kit run <demo>            audio → record → render → verify, in one go
+ *   demo-video-kit init <demo> --url U   a starter demo folder that already works on page U
+ *   demo-video-kit doctor                checks what the kit needs on this machine
+ *   (and each step on its own, plus voices and annotate; see `demo-video-kit help`)
+ */
+const fs = require('fs');
+const path = require('path');
+const { spawn } = require('child_process');
+
+const HELP = `demo-video-kit: narrated, subtitled 1080p demo videos of web app workflows
+
+Usage
+  demo-video-kit init <demo> [--url <url>]    make a starter demo folder (works right away)
+  demo-video-kit run <demo> [--from <step>] [--open]
+                                              make the video: audio, record, render, verify
+  demo-video-kit audio  <demo>                step 1: narration.json → voice clips
+  demo-video-kit record <demo>                step 2: run flow.cjs in headless Chrome
+  demo-video-kit render <demo>                step 3: video + voice + subtitles → <demo>.mp4
+  demo-video-kit verify <demo>                step 4: check the format and silences
+  demo-video-kit annotate <demo>              draw boxes from annotations.json (fallback)
+  demo-video-kit voices [filter]              list voices, e.g. "voices en-US"
+  demo-video-kit doctor                       check this machine
+
+Options
+  --from <step>   start "run" at audio, record, render or verify (reuses earlier output)
+  --open          play the video when it is done
+
+Environment
+  DEMO_BASE_URL   the app's address, read by flow.cjs
+  DEMO_BROWSER    chrome (default) or msedge
+  Credentials (e.g. DEMO_EMAIL, DEMO_PASSWORD) are read by flow.cjs and never written to a file.
+`;
+
+const STEPS = ['audio', 'record', 'render', 'verify'];
+
+function parse(argv) {
+  const args = { _: [] };
+  for (let i = 0; i < argv.length; i++) {
+    const a = argv[i];
+    if (a === '--open') args.open = true;
+    else if (a === '--help' || a === '-h') args.help = true;
+    else if (a === '--from' || a === '--url') args[a.slice(2)] = argv[++i];
+    else if (a.startsWith('--from=') || a.startsWith('--url=')) { const [k, v] = a.slice(2).split('='); args[k] = v; }
+    else if (a.startsWith('-')) throw new Error(`Unknown option ${a}`);
+    else args._.push(a);
+  }
+  return args;
+}
+
+function demoDir(name) {
+  if (!name) throw new Error('Name the demo folder, e.g. "demo-video-kit run demos/signup"');
+  const dir = path.resolve(name);
+  if (!fs.existsSync(dir)) throw new Error(`No folder ${dir}. Make one with "demo-video-kit init ${name}"`);
+  return dir;
+}
+
+function openFile(file) {
+  const [cmd, args] = process.platform === 'win32' ? ['cmd', ['/c', 'start', '""', file]]
+    : process.platform === 'darwin' ? ['open', [file]] : ['xdg-open', [file]];
+  spawn(cmd, args, { detached: true, stdio: 'ignore', windowsHide: true }).unref();
+}
+
+async function runSteps(dir, from = 'audio', { open } = {}) {
+  const start = STEPS.indexOf(from);
+  if (start < 0) throw new Error(`--from must be one of ${STEPS.join(', ')}`);
+  const kit = require('../index');
+  const t0 = Date.now();
+  let warnings = [], checked;
+  for (const [i, step] of STEPS.entries()) {
+    if (i < start) continue;
+    console.log(`\n▶ ${i + 1}/4 ${step}`);
+    if (step === 'audio') await kit.generateAudio(dir);
+    if (step === 'record') warnings = kit.record(dir).warnings;
+    if (step === 'render') kit.render(dir);
+    if (step === 'verify') checked = kit.verify(dir);
+  }
+  const video = path.join(dir, `${path.basename(dir)}.mp4`);
+  const secs = ((Date.now() - t0) / 1000).toFixed(0);
+  if (checked && !checked.ok) {
+    console.log(`\n✗ ${video} was made, but it fails the checks above (${secs}s).`);
+    console.log('  Fix: lengthen or split the narration of the silent part in narration.json, then run again.');
+    process.exitCode = 1;
+  } else {
+    if (warnings.length) console.log(`\n! ${warnings.length} recorder warning(s); see above.`);
+    console.log(`\n✓ ${video} (${secs}s)`);
+  }
+  if (open) openFile(video);
+}
+
+function init(name, url) {
+  if (!name) throw new Error('Name the new demo, e.g. "demo-video-kit init demos/signup --url http://localhost:3000"');
+  const dir = path.resolve(name);
+  if (fs.existsSync(dir) && fs.readdirSync(dir).length) throw new Error(`${dir} already exists and is not empty`);
+  fs.mkdirSync(dir, { recursive: true });
+  const tpl = path.join(__dirname, '..', 'templates', 'starter');
+  const target = url || 'https://example.com/';
+  for (const f of fs.readdirSync(tpl)) {
+    const text = fs.readFileSync(path.join(tpl, f), 'utf8').replace(/__URL__/g, target).replace(/__NAME__/g, path.basename(dir));
+    fs.writeFileSync(path.join(dir, f), text);
+  }
+  const rel = (path.relative(process.cwd(), dir) || '.').split(path.sep).join('/');
+  console.log(`Made ${rel}/ with narration.json (what to say) and flow.cjs (what to do), for ${target}`);
+  console.log(`\nTry it now:\n  npx demo-video-kit run ${rel} --open\n\nThen edit both files for your workflow; each segment "id" in one matches a segment() in the other.`);
+}
+
+async function doctor() {
+  let ok = true;
+  const line = (good, what, fix) => { console.log(`${good ? '✓' : '✗'} ${what}${good || !fix ? '' : `\n    → ${fix}`}`); if (!good) ok = false; };
+  const major = +process.versions.node.split('.')[0];
+  line(major >= 18, `Node ${process.versions.node}`, 'Install Node 18 or newer from nodejs.org');
+  try {
+    const { ffmpegRaw } = require('../lib/ffmpeg');
+    line(/ffmpeg version/.test(ffmpegRaw(['-version']).stdout), 'ffmpeg (bundled)', 'Reinstall the kit: npm install demo-video-kit');
+  } catch (e) { line(false, 'ffmpeg (bundled)', e.message); }
+  const { chromium } = require('playwright-core');
+  let browser = null;
+  for (const channel of ['chrome', 'msedge']) {
+    try { const b = await chromium.launch({ channel, headless: true }); await b.close(); browser = channel; break; } catch (_) { /* try the next */ }
+  }
+  line(!!browser, browser ? `Browser: ${browser}${browser === 'msedge' ? ' (Chrome not found; Edge will be used)' : ''}` : 'Browser', 'Install Google Chrome');
+  try {
+    const voices = await require('../lib/audio').listVoices();
+    line(voices.length > 0, `Voices: ${voices.length} available (internet works)`);
+  } catch (e) { line(false, 'Voices (needs internet)', `Check the internet connection: ${e.message}`); }
+  console.log(ok ? '\nAll set.' : '\nFix the ✗ lines, then run "demo-video-kit doctor" again.');
+  if (!ok) process.exitCode = 1;
+}
+
+async function main() {
+  const args = parse(process.argv.slice(2));
+  const [cmd, target] = args._;
+  if (!cmd || args.help || cmd === 'help') { console.log(HELP); return; }
+  const kit = () => require('../index');
+  switch (cmd) {
+    case 'run': return runSteps(demoDir(target), args.from, args);
+    case 'init': return init(target, args.url);
+    case 'doctor': return doctor();
+    case 'audio': return kit().generateAudio(demoDir(target));
+    case 'record': return kit().record(demoDir(target));
+    case 'render': return kit().render(demoDir(target));
+    case 'verify': { const r = kit().verify(demoDir(target)); if (!r.ok) process.exitCode = 1; return r; }
+    case 'annotate': return kit().annotate(demoDir(target));
+    case 'voices': {
+      const voices = await kit().listVoices(target || '');
+      for (const v of voices) console.log(`${v.ShortName.padEnd(36)} ${v.Gender.padEnd(7)} ${v.Locale}`);
+      return console.log(`\n${voices.length} voice(s). Use one as "voice" in narration.json.`);
+    }
+    default: throw new Error(`Unknown command "${cmd}". Run "demo-video-kit help".`);
+  }
+}
+
+main().catch((e) => { console.error(`\n✗ ${e.message}`); process.exit(1); });
