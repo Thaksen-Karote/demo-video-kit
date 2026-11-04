@@ -1,6 +1,6 @@
 {
   "name": "demo-video-kit",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Narrated, subtitled 1080p demo videos of web app workflows, with Playwright and Edge TTS. One command, no Python.",
   "license": "MIT",
   "author": "Thaksen Karote",
@@ -8,7 +8,16 @@
     "type": "git",
     "url": "git+https://github.com/Thaksen-Karote/demo-video-kit.git"
   },
-  "keywords": ["demo", "video", "playwright", "tts", "walkthrough", "screencast", "subtitles", "claude-code-skill"],
+  "keywords": [
+    "demo",
+    "video",
+    "playwright",
+    "tts",
+    "walkthrough",
+    "screencast",
+    "subtitles",
+    "claude-code-skill"
+  ],
   "main": "index.js",
   "exports": {
     ".": "./index.js",
@@ -17,17 +26,24 @@
   "bin": {
     "demo-video-kit": "bin/demo-video-kit.js"
   },
-  "files": ["bin", "lib", "templates", "index.js", "SKILL.md"],
+  "files": [
+    "bin",
+    "lib",
+    "templates",
+    "index.js",
+    "SKILL.md"
+  ],
   "engines": {
     "node": ">=18"
   },
   "scripts": {
     "test": "node --test \"test/*.test.js\"",
-    "example": "node bin/demo-video-kit.js run examples/todomvc"
+    "example": "node bin/demo-video-kit.js run examples/analog-clock"
   },
   "dependencies": {
     "ffmpeg-static": "^5.3.0",
     "msedge-tts": "^2.1.1",
-    "playwright-core": "1.63.0"
+    "playwright-core": "1.63.0",
+    "yaml": "^2.9.1"
   }
 }

@@ -1,0 +1,53 @@
+# What the demo says and does. Make the video:  npx demo-video-kit run <this folder> --open
+#
+# Each step: "say" is one piece of narration; "do" is what happens on screen while it plays.
+# Things are found by what you see on the page: a button, link, field label, placeholder,
+# tooltip (title) or plain text.
+#
+#   - click: Sign in                       click it
+#   - point: Total                         move the cursor to it
+#   - type: { Email: $DEMO_EMAIL }         type into a field ($NAME reads an environment variable)
+#   - press: Enter                         press a key
+#   - check: Remember me                   tick a checkbox
+#   - select: { Country: India }           choose from a dropdown
+#   - scroll: down                         down, up, top, bottom, pixels, or text to scroll to
+#   - wait: 2                              seconds; or text to wait for; or { sentence: 1 }
+#   - expect: Welcome back                 this text must appear, or the run fails
+#   - open: /settings                      go to another page
+#
+# Options on any action:
+#   highlight: true      red box on it          within: Billing   only inside that block
+#   nth: 2               the 2nd match          optional: true    skip it if it is not there
+#   or target it exactly with { css: "#id" }, { testid: "save" } or { role: button, name: Save }
+
+title: __NAME__ demo
+url: __URL__
+voice: en-IN-NeerjaNeural
+rate: -4%
+
+steps:
+  - scene: The first page
+    say: >
+      Welcome. This short demo was made with demo video kit.
+      This is the first page of the app.
+    do:
+      - wait: { sentence: 1 }
+      - point: { css: "h1, h2" }
+        highlight: true
+        optional: true
+
+  - scene: Look around
+    say: >
+      Let's scroll down to see the rest of the page.
+      Each step's narration plays while its actions run, so the voice always matches the screen.
+    do:
+      - scroll: down
+      - wait: 1.5
+      - scroll: down
+
+  - scene: Done
+    say: >
+      And back to the top. To make your own demo, edit demo dot yaml:
+      each step has what to say, and what to do.
+    do:
+      - scroll: top

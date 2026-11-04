@@ -3,7 +3,7 @@
  * The demo-video-kit command.
  *
  *   demo-video-kit run <demo>            audio → record → render → verify, in one go
- *   demo-video-kit init <demo> --url U   a starter demo folder that already works on page U
+ *   demo-video-kit init <demo> --url U   a starter demo.yaml that already works on page U
  *   demo-video-kit doctor                checks what the kit needs on this machine
  *   (and each step on its own, plus voices and annotate; see `demo-video-kit help`)
  */
@@ -14,11 +14,13 @@ const { spawn } = require('child_process');
 const HELP = `demo-video-kit: narrated, subtitled 1080p demo videos of web app workflows
 
 Usage
-  demo-video-kit init <demo> [--url <url>]    make a starter demo folder (works right away)
+  demo-video-kit init <demo> [--url <url>] [--js]
+                                              make a starter demo (works right away):
+                                              demo.yaml, or flow.cjs + narration.json with --js
   demo-video-kit run <demo> [--from <step>] [--open]
                                               make the video: audio, record, render, verify
-  demo-video-kit audio  <demo>                step 1: narration.json → voice clips
-  demo-video-kit record <demo>                step 2: run flow.cjs in headless Chrome
+  demo-video-kit audio  <demo>                step 1: the narration → voice clips
+  demo-video-kit record <demo>                step 2: run demo.yaml (or flow.cjs) in headless Chrome
   demo-video-kit render <demo>                step 3: video + voice + subtitles → <demo>.mp4
   demo-video-kit verify <demo>                step 4: check the format and silences
   demo-video-kit annotate <demo>              draw boxes from annotations.json (fallback)
@@ -28,11 +30,14 @@ Usage
 Options
   --from <step>   start "run" at audio, record, render or verify (reuses earlier output)
   --open          play the video when it is done
+  --js            init: write JavaScript (flow.cjs) instead of demo.yaml
 
 Environment
-  DEMO_BASE_URL   the app's address, read by flow.cjs
+  DEMO_BASE_URL   the app's address (overrides "url:" in demo.yaml)
+  DEMO_DEBUG      print details when something on the page cannot be boxed
   DEMO_BROWSER    chrome (default) or msedge
-  Credentials (e.g. DEMO_EMAIL, DEMO_PASSWORD) are read by flow.cjs and never written to a file.
+  Credentials: write $DEMO_PASSWORD (or any $NAME) in demo.yaml; values are read from the
+  environment and never written to a file.
 `;
 
 const STEPS = ['audio', 'record', 'render', 'verify'];
@@ -42,6 +47,7 @@ function parse(argv) {
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     if (a === '--open') args.open = true;
+    else if (a === '--js') args.js = true;
     else if (a === '--help' || a === '-h') args.help = true;
     else if (a === '--from' || a === '--url') args[a.slice(2)] = argv[++i];
     else if (a.startsWith('--from=') || a.startsWith('--url=')) { const [k, v] = a.slice(2).split('='); args[k] = v; }
@@ -82,7 +88,7 @@ async function runSteps(dir, from = 'audio', { open } = {}) {
   const secs = ((Date.now() - t0) / 1000).toFixed(0);
   if (checked && !checked.ok) {
     console.log(`\n✗ ${video} was made, but it fails the checks above (${secs}s).`);
-    console.log('  Fix: lengthen or split the narration of the silent part in narration.json, then run again.');
+    console.log('  Fix: lengthen or split the narration of the silent part (its "say:" or "text"), then run again.');
     process.exitCode = 1;
   } else {
     if (warnings.length) console.log(`\n! ${warnings.length} recorder warning(s); see above.`);
@@ -91,12 +97,12 @@ async function runSteps(dir, from = 'audio', { open } = {}) {
   if (open) openFile(video);
 }
 
-function init(name, url) {
+function init(name, url, js) {
   if (!name) throw new Error('Name the new demo, e.g. "demo-video-kit init demos/signup --url http://localhost:3000"');
   const dir = path.resolve(name);
   if (fs.existsSync(dir) && fs.readdirSync(dir).length) throw new Error(`${dir} already exists and is not empty`);
   fs.mkdirSync(dir, { recursive: true });
-  const tpl = path.join(__dirname, '..', 'templates', 'starter');
+  const tpl = path.join(__dirname, '..', 'templates', js ? 'starter-js' : 'starter');
   const target = url || 'https://example.com/';
   for (const f of fs.readdirSync(tpl)) {
     const text = fs.readFileSync(path.join(tpl, f), 'utf8').replace(/__URL__/g, target).replace(/__NAME__/g, path.basename(dir));
@@ -104,9 +110,11 @@ function init(name, url) {
     fs.writeFileSync(path.join(dir, f === 'gitignore' ? '.gitignore' : f), text);
   }
   const rel = (path.relative(process.cwd(), dir) || '.').split(path.sep).join('/');
-  console.log(`Made ${rel}/ with narration.json (what to say) and flow.cjs (what to do), for ${target}`);
+  console.log(js ? `Made ${rel}/ with narration.json (what to say) and flow.cjs (what to do), for ${target}`
+    : `Made ${rel}/demo.yaml (what to say and do, step by step), for ${target}`);
   console.log('Its .gitignore keeps the generated audio, build files and video out of git.');
-  console.log(`\nTry it now:\n  npx demo-video-kit run ${rel} --open\n\nThen edit both files for your workflow; each segment "id" in one matches a segment() in the other.`);
+  console.log(`\nTry it now:\n  npx demo-video-kit run ${rel} --open\n\n${js ? 'Then edit both files for your workflow; each segment "id" in one matches a segment() in the other.'
+    : 'Then edit demo.yaml for your workflow; the comments at its top list every action.'}`);
 }
 
 async function doctor() {
@@ -139,7 +147,7 @@ async function main() {
   const kit = () => require('../index');
   switch (cmd) {
     case 'run': return runSteps(demoDir(target), args.from, args);
-    case 'init': return init(target, args.url);
+    case 'init': return init(target, args.url, args.js);
     case 'doctor': return doctor();
     case 'audio': return kit().generateAudio(demoDir(target));
     case 'record': return kit().record(demoDir(target));

@@ -1,0 +1,90 @@
+# A tour of Analog Clock, written as demo.yaml: no JavaScript.
+# Make the video:  npx demo-video-kit run examples/analog-clock --open
+
+title: Analog Clock tour
+url: https://thaksen-karote.github.io/analog-clock/
+voice: en-IN-NeerjaNeural
+rate: -4%
+
+steps:
+  - scene: The clock
+    say: >
+      This is Analog Clock, a web app with a classic clock face and a digital time underneath.
+      Let's take a quick tour of what it can do.
+    do:
+      - point: { css: .clock-face }
+        highlight: true
+      - wait: { sentence: 1 }
+      - point: { css: "#digital-clock" }
+        highlight: true
+
+  - scene: Themes
+    say: >
+      At the top left, the Themes panel changes the look of the clock.
+      Let's try the dark theme, then ocean, and then neon.
+    do:
+      - point: Themes
+        within: Themes
+        highlight: block
+      - wait: { sentence: 1 }
+      - click: Dark
+        highlight: true
+      - wait: 1.5
+      - click: Ocean
+        highlight: true
+      - wait: 1.5
+      - click: Neon
+        highlight: true
+
+  - scene: Time zones
+    say: >
+      On the right, Time Zones switch the clock to another city.
+      We pick New York, and the hands jump to New York time. Then Tokyo.
+    do:
+      - point: Time Zones
+        within: Time Zones
+        highlight: block
+      - wait: { sentence: 1 }
+      - click: EST [ America / NewYork ]
+        highlight: true
+      - wait: 2.5
+      - click: JST [ Asia / Tokyo ]
+        highlight: true
+
+  - scene: Stopwatch
+    say: >
+      The stopwatch measures time. We press Start, let it run for a few seconds,
+      and then press Pause.
+    do:
+      - click: Start
+        within: Stopwatch
+        highlight: true
+      - wait: 4
+      - click: Pause
+        within: Stopwatch
+        highlight: true
+
+  - scene: Timer
+    say: >
+      The timer counts down. We set it to five seconds and press Start,
+      and it counts down to zero.
+    do:
+      - select: "05"
+        within: Set Timer
+        nth: 3
+        highlight: true
+      - click: Start
+        within: Set Timer
+        highlight: true
+      - wait: 5
+
+  - scene: Done
+    say: >
+      Finally, back to India time and the classic theme.
+      That's Analog Clock: themes, time zones, a stopwatch and a timer.
+    do:
+      - click: IST [ Asia / Kolkata ]
+        highlight: true
+      - click: Classic
+        highlight: true
+      - expect: Stopwatch

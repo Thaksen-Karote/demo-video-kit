@@ -5,7 +5,7 @@ description: Record a narrated, subtitled demo video of a real web app workflow 
 
 # Demo video
 
-Records the real application (never a mock or an old video) in a fresh headless browser, narrates it with Edge TTS, burns in subtitles, and renders an MP4. A demo is two files written for its process, `narration.json` and `flow.cjs`; everything else is the `demo-video-kit` command in this folder. The worked example is `examples/todomvc/`.
+Records the real application (never a mock or an old video) in a fresh headless browser, narrates it with Edge TTS, burns in subtitles, and renders an MP4. A demo is one file written for its process, `demo.yaml` (what to say and what to do, step by step); everything else is the `demo-video-kit` command in this folder. The worked example is `examples/analog-clock/demo.yaml`. For logic YAML cannot express (conditions, loops, reading a value off the page to use later), write `flow.cjs` + `narration.json` instead (`init --js`; example `examples/todomvc/`).
 
 `<kit>` below means `node <this folder>/bin/demo-video-kit.js` (this folder is, for example, `~/.claude/skills/demo-video`); when the user's project has the kit installed, `npx demo-video-kit` works the same. `<kit> help` lists every command.
 
@@ -14,10 +14,10 @@ Records the real application (never a mock or an old video) in a fresh headless 
 | Request | Do |
 | --- | --- |
 | "Create a demo for <process>" | The whole workflow below, in `demos/<process>/` of the user's project |
-| "<process> screens changed, redo the demo" | Dry-run the new screens (step 2), fix `flow.cjs` and, if the words no longer fit, `narration.json`; then steps 4 to 8 |
+| "<process> screens changed, redo the demo" | Dry-run the new screens (step 2), fix the `do:` actions and, if the words no longer fit, the `say:` lines; then steps 4 to 6 |
 | "Add boxes to the existing <process> video" (no new recording) | Measure the boxes in the running app, write `annotations.json`, run `<kit> annotate <demo-dir>` (see Highlights) |
 | "... without highlights" | Leave out every `highlight` option; nothing else changes |
-| "Change the voice / speed / wording" | Edit `narration.json` (`voice`, `rate`, segment `text`), then steps 4 to 8: the clip lengths drive the on-screen timing, so the video is always recorded again |
+| "Change the voice / speed / wording" | Edit `voice`, `rate` or the `say:` lines, then steps 4 to 6: the clip lengths drive the on-screen timing, so the video is always recorded again |
 
 ## Rules (always)
 
@@ -35,7 +35,7 @@ Records the real application (never a mock or an old video) in a fresh headless 
 
 A red box (4 px, `#E11D48`, 6 px clear of the element) is drawn live in the page while the video records, so it follows scrolling and is part of the picture. Box by default: each menu item clicked on the way to the screen, the buttons that start the process, each block of entered data on a review page, and the final submit button. Do not box every field being typed: the cursor and the typing already show it.
 
-API in `flow.cjs`:
+In `demo.yaml`, `highlight: true` boxes the target and `highlight: block` boxes the whole `within:` block. In `flow.cjs`:
 
 - `goto / click / type / pick (loc, ..., { highlight })`: `highlight: true` boxes the element the cursor goes to; `highlight: <locator>` boxes another element instead (for example its whole row or block).
 - A box stays until the cursor moves to the next target. `{ keep: true }` keeps the current boxes as well; `k.clearHighlights()` removes them; `k.highlight(loc)` adds one without moving the cursor.
@@ -47,10 +47,12 @@ For a video already recorded without boxes, `<kit> annotate <demo-dir>` draws th
 
 1. **Setup.** Run `<kit> doctor` (see Setup) and check that the app answers at its URL.
 2. **Dry run.** With the Playwright browser tools, walk the real flow without recording and without the final submit: note each screen's route, labels and `getByRole` names, dropdown options, dialogs, the final button, and what happens after it.
-3. **Write the demo**: `<kit> init <demo-dir> --url <app url>` makes a starter that already runs; or copy `examples/todomvc/`. Then edit:
-   - `narration.json`: title, voice, rate, `pronounce` (written → spoken), and segments `{id, scene, text}`. Split a scene into several segments wherever its actions take long, so each segment's narration lasts about as long as its actions.
-   - `flow.cjs`: `runDemo(__dirname, async (k) => { ... })` with one `k.segment(id, async (at, clip) => { ... })` per narration segment. Use `k.click / k.type / k.pick / k.goto / k.scrollBy`; `at(seconds)` waits for a point in the clip (for example `clip.cues[0].end`). Wait on elements, never on "network idle". Return what was verified. Keep `require(process.env.DEMO_KIT || 'demo-video-kit')`: the command sets `DEMO_KIT`.
-4. **Make it.** `<kit> run <demo-dir>` (with `DEMO_BASE_URL` and any credentials in the environment) runs audio, record, render and verify. Each `WARNING` line from the recorder, and each `FAIL` line from verify, breaks rule 5: fix and run again. After changing only `flow.cjs`, `--from record` skips the audio; after changing only subtitles or encoding, `--from render` skips the recording.
+3. **Write the demo**: `<kit> init <demo-dir> --url <app url>` makes a starter `demo.yaml` that already runs (its header comments list every action and option). Then write:
+   - Top: `title`, `url`, `voice`, `rate`, `pronounce` (written → spoken).
+   - `steps:`, each `{ scene, say, do: [actions] }`. One `say` per step; split a scene into several steps wherever its actions take long, so each step's narration lasts about as long as its actions.
+   - Actions: `click`, `point`, `type: { Label: text }`, `press`, `check`, `select: { Label: option }` (or `select: option` with `nth`), `scroll`, `wait` (seconds, text, or `{ sentence: N }`), `expect: text` (fails the run if missing: use it to prove the result), `open: /path`. Options: `highlight: true | block`, `within: <block text>` (when the same wording appears twice), `nth`, `optional`, `keep`, `delay`. Use the wording on screen (button names, labels, placeholders, tooltips) from the dry run; fall back to `{ css }`, `{ testid }` or `{ role, name }` only when wording cannot single the element out. Credentials as `$DEMO_PASSWORD`.
+   - Only with `--js`, `flow.cjs`: `runDemo(__dirname, async (k) => { ... })` with one `k.segment(id, async (at, clip) => { ... })` per narration segment. Use `k.click / k.type / k.pick / k.goto / k.scrollBy`; `at(seconds)` waits for a point in the clip (for example `clip.cues[0].end`). Wait on elements, never on "network idle". Return what was verified. Keep `require(process.env.DEMO_KIT || 'demo-video-kit')`: the command sets `DEMO_KIT`.
+4. **Make it.** `<kit> run <demo-dir>` (with any credentials in the environment; `DEMO_BASE_URL` overrides `url:`) runs audio, record, render and verify. Each `WARNING` line from the recorder, and each `FAIL` line from verify, breaks rule 5: fix and run again. After changing only the actions, `--from record` skips the audio; after changing only subtitles or encoding, `--from render` skips the recording.
 5. **Look at it.** `build/check/contact-sheet.png`: every frame shows the full screen, the cursor, the right step, readable subtitles, and boxes on the elements the narration names. The video is `<demo-dir>/<folder name>.mp4`.
 6. **Hand over.** Report the MP4 path, duration, format, longest gap, what the run created, and anything that differs from the request because the app works differently.
 
