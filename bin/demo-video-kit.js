@@ -17,6 +17,8 @@ Usage
   demo-video-kit init <demo> [--url <url>] [--js]
                                               make a starter demo (works right away):
                                               demo.yaml, or flow.cjs + narration.json with --js
+  demo-video-kit record-steps <demo> --url <url> [--paused] [--force]
+                                              use the app in a browser window; writes demo.yaml
   demo-video-kit run <demo> [--from <step>] [--open]
                                               make the video: audio, record, render, verify
   demo-video-kit audio  <demo>                step 1: the narration → voice clips
@@ -31,6 +33,8 @@ Options
   --from <step>   start "run" at audio, record, render or verify (reuses earlier output)
   --open          play the video when it is done
   --js            init: write JavaScript (flow.cjs) instead of demo.yaml
+  --paused        record-steps: start paused, to get the app ready first
+  --force         record-steps: replace an existing demo.yaml
 
 Environment
   DEMO_BASE_URL   the app's address (overrides "url:" in demo.yaml)
@@ -48,6 +52,8 @@ function parse(argv) {
     const a = argv[i];
     if (a === '--open') args.open = true;
     else if (a === '--js') args.js = true;
+    else if (a === '--paused') args.paused = true;
+    else if (a === '--force') args.force = true;
     else if (a === '--help' || a === '-h') args.help = true;
     else if (a === '--from' || a === '--url') args[a.slice(2)] = argv[++i];
     else if (a.startsWith('--from=') || a.startsWith('--url=')) { const [k, v] = a.slice(2).split('='); args[k] = v; }
@@ -148,6 +154,16 @@ async function main() {
   switch (cmd) {
     case 'run': return runSteps(demoDir(target), args.from, args);
     case 'init': return init(target, args.url, args.js);
+    case 'record-steps': {
+      if (!target) throw new Error('Name the demo folder, e.g. "demo-video-kit record-steps demos/signup --url http://localhost:3000"');
+      const dir = path.resolve(target);
+      const r = await require('../lib/recorder').recordSteps(dir, { url: args.url, paused: args.paused, force: args.force });
+      const rel = (path.relative(process.cwd(), dir) || '.').split(path.sep).join('/');
+      console.log(`
+Next: rewrite the say: lines in ${rel}/demo.yaml, then
+  npx demo-video-kit run ${rel} --open`);
+      return r;
+    }
     case 'doctor': return doctor();
     case 'audio': return kit().generateAudio(demoDir(target));
     case 'record': return kit().record(demoDir(target));

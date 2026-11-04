@@ -15,6 +15,10 @@
 #   - expect: Welcome back                 this text must appear, or the run fails
 #   - open: /settings                      go to another page
 #
+# Values: put them under data: and write {{name}}; {{today}}, {{time}}, {{timestamp}} and
+# {{random}} change on every run (useful for titles that must be unique).
+# Or let the kit write this file: npx demo-video-kit record-steps <folder> --url <url>
+#
 # Options on any action:
 #   highlight: true      red box on it          within: Billing   only inside that block
 #   nth: 2               the 2nd match          optional: true    skip it if it is not there

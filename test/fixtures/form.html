@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Test shop</title>
+  <style>
+    body { font: 18px system-ui, sans-serif; margin: 40px; }
+    section { border: 2px solid #ccc; padding: 16px; margin: 16px 0; width: 520px; }
+    label { display: block; margin: 8px 0; }
+  </style>
+</head>
+<body>
+  <h1>Test shop</h1>
+
+  <section id="signin">
+    <h2>Sign in</h2>
+    <label>Email <input id="email" type="email"></label>
+    <label>Password <input id="password" type="password"></label>
+    <label><input type="checkbox" id="remember"> Remember me</label>
+    <label>Country
+      <select id="country"><option>India</option><option>Japan</option><option>Kenya</option></select>
+    </label>
+    <button id="signin-btn">Sign in</button>
+    <p id="welcome" hidden>Welcome back</p>
+  </section>
+
+  <section>
+    <h2>Basket</h2>
+    <input placeholder="Search products">
+    <button>Add</button>
+  </section>
+
+  <section>
+    <h2>Wishlist</h2>
+    <button>Add</button>
+    <p id="wish" hidden>Saved to wishlist</p>
+  </section>
+
+  <a href="settings.html">Settings</a>
+
+  <script>
+    document.getElementById('signin-btn').onclick = () => { document.getElementById('welcome').hidden = false; };
+    document.querySelectorAll('section')[2].querySelector('button').onclick = () => { document.getElementById('wish').hidden = false; };
+  </script>
+</body>
+</html>

@@ -17,8 +17,8 @@ const { runDemo } = require(process.env.DEMO_KIT || 'demo-video-kit');
 
 const URL = process.env.DEMO_BASE_URL || '__URL__';
 
-runDemo(__dirname, async ({ p, W, H, env, segment, goto, click, type, pick, pause, scrollBy, clearHighlights }) => {
-  await p.goto(URL);
+runDemo(__dirname, async ({ p, W, H, env, open, segment, goto, click, type, pick, pause, scrollBy, clearHighlights }) => {
+  await open(URL);
   await p.locator('body').waitFor();
   await pause(800);
 

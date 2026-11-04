@@ -10,5 +10,6 @@ const { generateAudio, listVoices } = require('./lib/audio');
 const { render } = require('./lib/render');
 const { verify } = require('./lib/verify');
 const { annotate } = require('./lib/annotate');
+const { recordSteps } = require('./lib/recorder');
 
-module.exports = { runDemo, generateAudio, record, render, verify, annotate, listVoices };
+module.exports = { runDemo, generateAudio, record, render, verify, annotate, listVoices, recordSteps };

@@ -60,3 +60,37 @@ test('clear errors for common mistakes', () => {
   fails('steps:\n  - say: Hi.\n    do: click\n', /"do:" must be a list/);
   fails('steps:\n  - say: [unclosed\n', /not valid YAML/);
 });
+
+test('data: values, {{name}} and built-ins', () => {
+  const dir = demo(`
+data:
+  title: "Order {{random}}"
+  who: Asha
+steps:
+  - say: "{{who}} places an order."
+    do:
+      - type: { Title: "{{title}}" }
+      - expect: "{{title}}"
+`);
+  const plain = loadDemoYaml(dir);
+  assert.strictEqual(plain.steps[0].say, 'Asha places an order.');
+  assert.strictEqual(plain.steps[0].actions[0].value.Title, '{{title}}');
+  const run = loadDemoYaml(dir, { env: true });
+  const typed = run.steps[0].actions[0].value.Title;
+  assert.match(typed, /^Order \d{4}$/);
+  assert.strictEqual(run.steps[0].actions[1].value, typed, 'one random value per run, the same in expect:');
+});
+
+test('a password with $ or {{ is typed exactly as given', () => {
+  process.env.DVK_PW = 'a$B{{x}}c';
+  const d = loadDemoYaml(demo('steps:\n  - say: Hi.\n    do:\n      - type: { Password: $DVK_PW }\n'), { env: true });
+  assert.strictEqual(d.steps[0].actions[0].value.Password, 'a$B{{x}}c');
+  delete process.env.DVK_PW;
+});
+
+test('data: mistakes are explained', () => {
+  fails('steps:\n  - say: Hi.\n    do:\n      - type: { Title: "{{nope}}" }\n', /\{\{nope\}\} is not in data:/);
+  fails('data: { random: x }\nsteps:\n  - say: Hi.\n', /"random" is a built-in/);
+  fails('data: { t: "{{random}}" }\nsteps:\n  - say: "{{t}} now."\n', /say: can use \{\{t\}\} only if it is a fixed value/);
+  fails('stepz: []\n', /unknown key "stepz"/);
+});

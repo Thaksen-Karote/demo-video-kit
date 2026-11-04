@@ -3,7 +3,7 @@
  * Copy this folder and narration.json for your own app, and change the steps.
  *
  * From the repository root:
- *   npx demo-video-kit run examples/todomvc --open     (or: npm run example)
+ *   npx demo-video-kit run examples/todomvc --open
  */
 const { runDemo } = require(process.env.DEMO_KIT || 'demo-video-kit');
 
@@ -11,11 +11,11 @@ const URL = process.env.DEMO_BASE_URL || 'https://demo.playwright.dev/todomvc/';
 const TASKS = ['Buy groceries', 'Write the project README', 'Book a dentist appointment'];
 
 runDemo(__dirname, async (k) => {
-  const { p, W, H, segment, goto, click, type, pause, clearHighlights } = k;
+  const { p, W, H, open, segment, goto, click, type, pause, clearHighlights } = k;
   const input = p.getByPlaceholder('What needs to be done?');
   const item = (t) => p.getByTestId('todo-item').filter({ hasText: t });
 
-  await p.goto(URL);
+  await open(URL);
   await input.waitFor({ timeout: 30000 });
   await pause(600);
 

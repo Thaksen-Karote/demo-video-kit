@@ -1,9 +1,10 @@
 # demo-video-kit
 
-Turn a web app workflow into a narrated, subtitled 1080p demo video. You describe it in plain words in one YAML file, and one command makes the video.
+Turn a web app workflow into a narrated, subtitled 1080p demo video. Click through your app once, or describe it in plain words in one YAML file; then one command makes the video.
 
 ```bash
-npx demo-video-kit init demos/clock --url https://thaksen-karote.github.io/analog-clock/
+npx demo-video-kit record-steps demos/clock --url https://thaksen-karote.github.io/analog-clock/
+#   ...use the app in the window that opens, press Finish, rewrite the say: lines...
 npx demo-video-kit run demos/clock --open
 ```
 
@@ -25,7 +26,9 @@ It's only Node: no Python, no ffmpeg install, no API key, no JavaScript to write
 
 ## Features
 
+- **Record instead of write:** use your app in a browser window and get `demo.yaml` written for you
 - **Plain-words demos:** `click: Sign in` finds the button, link, label, placeholder, tooltip or text you can see
+- **Data in one place:** `data:` holds the values to type; `{{random}}`, `{{today}}` keep each run's records distinct
 - True 1920x1080, 30 fps, H.264 + AAC, recorded headless so nothing gets cut off
 - A smooth, visible cursor with click ripples, and live red boxes that follow scrolling
 - 300+ neural voices in many languages, with a pronunciation map
@@ -45,12 +48,13 @@ npm install --save-dev github:Thaksen-Karote/demo-video-kit
 npx demo-video-kit doctor
 ```
 
-Pin a release so a later change can't break your demos: `github:Thaksen-Karote/demo-video-kit#v0.3.0`.
+Pin a release so a later change can't break your demos: `github:Thaksen-Karote/demo-video-kit#v0.4.0`.
 
 ## Commands
 
 | Command | Does |
 |---|---|
+| `record-steps <demo> --url <url> [--paused] [--force]` | Opens a browser window; you use the app, and it writes `demo.yaml` |
 | `init <demo> [--url <url>] [--js]` | Makes a starter demo that already works on that page (`--js`: the JavaScript form) |
 | `run <demo> [--from <step>] [--open]` | Makes the video: audio → record → render → verify |
 | `audio` / `record` / `render` / `verify <demo>` | One step on its own |
@@ -59,6 +63,30 @@ Pin a release so a later change can't break your demos: `github:Thaksen-Karote/d
 | `annotate <demo>` | Draws boxes on an already-made video from `annotations.json` (fallback) |
 
 `--from record` skips making the voice again (when you changed only the actions); `--from render` reuses the recording. The video is `<demo>/<demo>.mp4`.
+
+## Record a demo: `record-steps`
+
+```bash
+npx demo-video-kit record-steps demos/signup --url http://localhost:3000
+```
+
+1. Start your app first, if it runs locally, and have a test account ready.
+2. A browser window opens with a small bar at the bottom right:
+
+   | Button | Does |
+   |---|---|
+   | **Pause** / **Record** | Stops and restarts recording. While paused, click around freely: nothing is written |
+   | **New step** | Starts the next step, meaning the next `say:` line of narration |
+   | **Finish** | Writes `demo.yaml` and closes the window (closing the window or Ctrl+C also saves) |
+
+3. Use the app as you want it shown. Clicks, typing, Enter, checkboxes and dropdowns are recorded. Each one gets the name you see on screen, checked against the page so it plays back, with `within:` or `nth:` added when the same name appears twice.
+4. Open `demo.yaml` and rewrite each draft `say:` line ("We click Start.") in your own words.
+5. `npx demo-video-kit run demos/signup --open`
+
+- **Typed values** go into `data:`.
+- **Passwords** are never saved; they become `$DEMO_PASSWORD`.
+- **Start paused** with `--paused`, to sign in or get to the right page first.
+- **Not recorded:** a second tab, and drag and drop.
 
 ## Write a demo: `demo.yaml`
 
@@ -112,6 +140,28 @@ steps:
 When the wording isn't enough, target the element exactly: `click: { css: "#save" }`, `{ testid: save }` or `{ role: button, name: Save }`.
 
 **Credentials:** write `$DEMO_PASSWORD` (any `$NAME`). The value is read from the environment when the demo runs, and it's never written to a file.
+
+### Data
+
+Keep the values to type in one place, and use them as `{{name}}`:
+
+```yaml
+data:
+  title: "Cement order {{random}}"   # a new number on every run
+  quantity: "400"
+  email: $DEMO_EMAIL                 # from the environment
+
+steps:
+  - say: We enter the order title and the quantity.
+    do:
+      - type: { Title: "{{title}}", Quantity: "{{quantity}}" }
+      - click: Save
+      - expect: "{{title}}"           # the same value as typed, in the same run
+```
+
+Built-ins: `{{today}}` (2026-11-04), `{{time}}` (14:32), `{{timestamp}}` (20261104-143205) and `{{random}}` (a 4-digit number). Each run really creates its record, so `{{random}}` or `{{timestamp}}` in a title avoids "name already taken" on the second run.
+
+`say:` can use fixed `data:` values only. The voice is made before the recording, so a `{{random}}` there would not match the screen.
 
 A full example is [`examples/analog-clock/demo.yaml`](examples/analog-clock/demo.yaml).
 
@@ -187,17 +237,18 @@ demo.yaml (do) ─── record ─▶ build/raw/*.webm + timeline         (Play
 ## Develop
 
 ```bash
-npm test          # fast unit tests, no browser
-npm run example   # the full pipeline on examples/analog-clock
+npm test            # fast unit tests, no browser
+npm run test:e2e    # record-steps on a local test page, then play the result back (needs Chrome)
+npm run example     # the full pipeline on examples/analog-clock
 ```
 
-Set `DEMO_DEBUG=1` to see why a highlight box could not be drawn.
+Set `DEMO_DEBUG=1` to see why a highlight box could not be drawn. A slow site is retried 3 times, and so is the voice service.
 
 ## Roadmap
 
 - [x] One command, Node only
 - [x] `demo.yaml`: say and do in one file, no JavaScript
-- [ ] `record`: click through the app once and get `demo.yaml` written for you
+- [x] `record-steps`: click through the app once and get `demo.yaml` written for you; `data:` values
 - [ ] Zoom and pan on small UIs
 - [ ] GIF and vertical (9:16) export
 - [ ] Publish on npm; a GitHub Action that re-renders on every release

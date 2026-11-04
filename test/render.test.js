@@ -1,7 +1,7 @@
 // Fast checks for the pure helpers (no browser, no network). Run: npm test
 const test = require('node:test');
 const assert = require('node:assert');
-const { srtTime, splitCue, wrap, outputName } = require('../lib/render');
+const { srtTime, splitCue, wrap, outputName, noOverlap } = require('../lib/render');
 const { splitSentences, escapeXml } = require('../lib/audio');
 
 test('srtTime formats hours, minutes, seconds and milliseconds', () => {
@@ -30,4 +30,10 @@ test('splitSentences and escapeXml', () => {
 
 test('the video is named after its folder', () => {
   assert.strictEqual(outputName('demos/signup'), 'signup.mp4');
+});
+
+test('noOverlap ends each subtitle before the next starts', () => {
+  const cues = noOverlap([{ start: 0.1, end: 2.665 }, { start: 2.615, end: 4.72 }, { start: 5, end: 6 }]);
+  assert.strictEqual(cues[0].end, 2.605);
+  assert.strictEqual(cues[1].end, 4.72);
 });
