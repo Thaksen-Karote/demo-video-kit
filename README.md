@@ -31,6 +31,7 @@ It's only Node: no Python, no ffmpeg install, no API key, no JavaScript to write
 - **Data in one place:** `data:` holds the values to type; `{{random}}`, `{{today}}` keep each run's records distinct
 - True 1920x1080, 30 fps, H.264 + AAC, recorded headless so nothing gets cut off
 - A smooth, visible cursor with click ripples, and live red boxes that follow scrolling
+- **Zoom:** the camera glides in on small things (a form, a panel, a dropdown) and back out, with text kept sharp
 - 300+ neural voices in many languages, with a pronunciation map
 - Actions synced to each sentence of the narration; clips never overlap
 - A built-in check: fails any video with 7 s or more of silence, and makes a contact sheet to look at
@@ -48,7 +49,7 @@ npm install --save-dev github:Thaksen-Karote/demo-video-kit
 npx demo-video-kit doctor
 ```
 
-Pin a release so a later change can't break your demos: `github:Thaksen-Karote/demo-video-kit#v0.4.0`.
+Pin a release so a later change can't break your demos: `github:Thaksen-Karote/demo-video-kit#v0.5.0`.
 
 ## Commands
 
@@ -136,6 +137,22 @@ steps:
 | `optional` | `optional: true` | Skips the action if nothing matches, instead of failing |
 | `keep` | `keep: true` | Keeps earlier boxes on screen |
 | `delay` | `delay: 60` | `type` only: milliseconds per key |
+| `zoom` | `zoom: true` | Zooms in (2x) while this happens; `zoom: 1.5` for less, `zoom: block` to frame the whole `within` block, `zoom: false` to stay out |
+
+### Zoom
+
+Small pages are hard to read at 1920x1080. With `zoom:`, the camera glides in on the action and stays there while the next actions are nearby. The first action without zoom glides back out.
+
+```yaml
+- click: Start
+  within: Stopwatch
+  zoom: block      # frame the whole Stopwatch panel
+- click: Pause
+  within: Stopwatch
+  zoom: block      # already in view: the camera stays
+```
+
+`zoom: true` (or `zoom: 1.8`) at the top of the file zooms every click, type, check and select; `zoom: false` on one action keeps it out. The page is scaled in the browser, so text is redrawn sharply, not blown up from pixels. Each zoom adds about 0.7 s.
 
 When the wording isn't enough, target the element exactly: `click: { css: "#save" }`, `{ testid: save }` or `{ role: button, name: Save }`.
 
@@ -182,7 +199,7 @@ runDemo(__dirname, async ({ p, env, segment, click, type }) => {
 });
 ```
 
-The helpers are `goto`, `click`, `type`, `pick`, `scrollBy`, `highlight`, `clearHighlights`, `pause` and `mark`. See [`examples/todomvc`](examples/todomvc).
+The helpers are `open`, `goto`, `click`, `type`, `pick`, `scrollBy`, `highlight`, `clearHighlights`, `zoomTo`, `zoomOut`, `pause` and `mark`. `goto`, `click`, `type` and `pick` take `{ highlight, zoom, zoomOn }`. See [`examples/todomvc`](examples/todomvc).
 
 ## What goes where
 
@@ -249,7 +266,7 @@ Set `DEMO_DEBUG=1` to see why a highlight box could not be drawn. A slow site is
 - [x] One command, Node only
 - [x] `demo.yaml`: say and do in one file, no JavaScript
 - [x] `record-steps`: click through the app once and get `demo.yaml` written for you; `data:` values
-- [ ] Zoom and pan on small UIs
+- [x] Zoom and pan on small UIs
 - [ ] GIF and vertical (9:16) export
 - [ ] Publish on npm; a GitHub Action that re-renders on every release
 

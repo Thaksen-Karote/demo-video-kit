@@ -22,6 +22,7 @@
 # Options on any action:
 #   highlight: true      red box on it          within: Billing   only inside that block
 #   nth: 2               the 2nd match          optional: true    skip it if it is not there
+#   zoom: true           camera zooms in (2x)   zoom: block       frame the whole within: block
 #   or target it exactly with { css: "#id" }, { testid: "save" } or { role: button, name: Save }
 
 title: __NAME__ demo

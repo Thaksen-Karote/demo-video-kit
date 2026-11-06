@@ -94,3 +94,13 @@ test('data: mistakes are explained', () => {
   fails('data: { t: "{{random}}" }\nsteps:\n  - say: "{{t}} now."\n', /say: can use \{\{t\}\} only if it is a fixed value/);
   fails('stepz: []\n', /unknown key "stepz"/);
 });
+
+test('zoom: per action and for the whole demo', () => {
+  const d = loadDemoYaml(demo('zoom: 1.5\nsteps:\n  - say: Hi.\n    do:\n      - click: Start\n        within: Stopwatch\n        zoom: block\n      - click: Stop\n        zoom: false\n'));
+  assert.strictEqual(d.zoom, 1.5);
+  assert.strictEqual(d.steps[0].actions[0].zoom, 'block');
+  assert.strictEqual(d.steps[0].actions[1].zoom, false);
+  fails('steps:\n  - say: Hi.\n    do:\n      - click: A\n        zoom: 9\n', /zoom must be true, false, block, or a number from 1.2 to 4/);
+  fails('steps:\n  - say: Hi.\n    do:\n      - click: A\n        zoom: block\n', /zoom: block needs within:/);
+  fails('zoom: block\nsteps:\n  - say: Hi.\n', /"block" is for one action/);
+});

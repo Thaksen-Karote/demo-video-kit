@@ -59,10 +59,12 @@ steps:
       - click: Start
         within: Stopwatch
         highlight: true
+        zoom: block          # the camera frames the whole Stopwatch panel
       - wait: 4
       - click: Pause
         within: Stopwatch
         highlight: true
+        zoom: block
 
   - scene: Timer
     say: >
@@ -73,9 +75,11 @@ steps:
         within: Set Timer
         nth: 3
         highlight: true
+        zoom: block          # pans straight across from the stopwatch
       - click: Start
         within: Set Timer
         highlight: true
+        zoom: block
       - wait: 5
 
   - scene: Done

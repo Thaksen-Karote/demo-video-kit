@@ -1,6 +1,6 @@
 {
   "name": "demo-video-kit",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "description": "Narrated, subtitled 1080p demo videos of web app workflows, with Playwright and Edge TTS. One command, no Python.",
   "license": "MIT",
   "author": "Thaksen Karote",
