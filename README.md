@@ -49,7 +49,7 @@ npm install --save-dev github:Thaksen-Karote/demo-video-kit
 npx demo-video-kit doctor
 ```
 
-Pin a release so a later change can't break your demos: `github:Thaksen-Karote/demo-video-kit#v0.5.0`.
+Pin a release so a later change can't break your demos: `github:Thaksen-Karote/demo-video-kit#v0.6.0`.
 
 ## Commands
 
@@ -57,13 +57,22 @@ Pin a release so a later change can't break your demos: `github:Thaksen-Karote/d
 |---|---|
 | `record-steps <demo> --url <url> [--paused] [--force]` | Opens a browser window; you use the app, and it writes `demo.yaml` |
 | `init <demo> [--url <url>] [--js]` | Makes a starter demo that already works on that page (`--js`: the JavaScript form) |
-| `run <demo> [--from <step>] [--open]` | Makes the video: audio → record → render → verify |
+| `run <demo> [--from <step>] [--voice <name>] [--rate <speed>] [--open]` | Makes the video: audio → record → render → verify |
 | `audio` / `record` / `render` / `verify <demo>` | One step on its own |
 | `voices [filter]` | Lists voices, e.g. `voices hi-IN` |
 | `doctor` | Checks Node, ffmpeg, the browser and the voices |
 | `annotate <demo>` | Draws boxes on an already-made video from `annotations.json` (fallback) |
 
 `--from record` skips making the voice again (when you changed only the actions); `--from render` reuses the recording. The video is `<demo>/<demo>.mp4`.
+
+**Try another voice without editing the file:**
+
+```bash
+npx demo-video-kit voices en-GB                     # see the names
+npx demo-video-kit run demos/signup --voice en-GB-RyanNeural --rate +10% --open
+```
+
+`--voice` and `--rate` apply to that run only; `voice:` and `rate:` in `demo.yaml` stay as they are. A misspelt name stops at once and lists the voices of that language. The speed can be written `+10%`, `10%` or `10`.
 
 ## Record a demo: `record-steps`
 
@@ -267,6 +276,7 @@ Set `DEMO_DEBUG=1` to see why a highlight box could not be drawn. A slow site is
 - [x] `demo.yaml`: say and do in one file, no JavaScript
 - [x] `record-steps`: click through the app once and get `demo.yaml` written for you; `data:` values
 - [x] Zoom and pan on small UIs
+- [x] `--voice` and `--rate` on the command line
 - [ ] GIF and vertical (9:16) export
 - [ ] Publish on npm; a GitHub Action that re-renders on every release
 

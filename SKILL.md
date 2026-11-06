@@ -17,6 +17,7 @@ Records the real application (never a mock or an old video) in a fresh headless 
 | "<process> screens changed, redo the demo" | Dry-run the new screens (step 2), fix the `do:` actions and, if the words no longer fit, the `say:` lines; then steps 4 to 6 |
 | "Add boxes to the existing <process> video" (no new recording) | Measure the boxes in the running app, write `annotations.json`, run `<kit> annotate <demo-dir>` (see Highlights) |
 | "... without highlights" | Leave out every `highlight` option; nothing else changes |
+| "Try another voice / speed" | `<kit> run <demo-dir> --voice en-GB-RyanNeural --rate +10%`: for that run only, the file is unchanged. Edit `voice:`/`rate:` to keep it |
 | "Change the voice / speed / wording" | Edit `voice`, `rate` or the `say:` lines, then steps 4 to 6: the clip lengths drive the on-screen timing, so the video is always recorded again |
 
 ## Rules (always)

@@ -19,9 +19,10 @@ Usage
                                               demo.yaml, or flow.cjs + narration.json with --js
   demo-video-kit record-steps <demo> --url <url> [--paused] [--force]
                                               use the app in a browser window; writes demo.yaml
-  demo-video-kit run <demo> [--from <step>] [--open]
+  demo-video-kit run <demo> [--from <step>] [--voice <name>] [--rate <speed>] [--open]
                                               make the video: audio, record, render, verify
-  demo-video-kit audio  <demo>                step 1: the narration → voice clips
+  demo-video-kit audio  <demo> [--voice <name>] [--rate <speed>]
+                                              step 1: the narration → voice clips
   demo-video-kit record <demo>                step 2: run demo.yaml (or flow.cjs) in headless Chrome
   demo-video-kit render <demo>                step 3: video + voice + subtitles → <demo>.mp4
   demo-video-kit verify <demo>                step 4: check the format and silences
@@ -31,6 +32,9 @@ Usage
 
 Options
   --from <step>   start "run" at audio, record, render or verify (reuses earlier output)
+  --voice <name>  run, audio: use this voice for this run (e.g. en-GB-RyanNeural);
+                  the file is not changed. See the names with "voices".
+  --rate <speed>  run, audio: speaking speed for this run, e.g. +10% or -10%
   --open          play the video when it is done
   --js            init: write JavaScript (flow.cjs) instead of demo.yaml
   --paused        record-steps: start paused, to get the app ready first
@@ -46,6 +50,8 @@ Environment
 
 const STEPS = ['audio', 'record', 'render', 'verify'];
 
+const VALUE_OPTS = ['from', 'url', 'voice', 'rate'];
+
 function parse(argv) {
   const args = { _: [] };
   for (let i = 0; i < argv.length; i++) {
@@ -55,8 +61,10 @@ function parse(argv) {
     else if (a === '--paused') args.paused = true;
     else if (a === '--force') args.force = true;
     else if (a === '--help' || a === '-h') args.help = true;
-    else if (a === '--from' || a === '--url') args[a.slice(2)] = argv[++i];
-    else if (a.startsWith('--from=') || a.startsWith('--url=')) { const [k, v] = a.slice(2).split('='); args[k] = v; }
+    else if (VALUE_OPTS.includes(a.slice(2))) {
+      if (argv[i + 1] === undefined) throw new Error(`${a} needs a value`);
+      args[a.slice(2)] = argv[++i];
+    } else if (VALUE_OPTS.some((k) => a.startsWith(`--${k}=`))) { const at = a.indexOf('='); args[a.slice(2, at)] = a.slice(at + 1); }
     else if (a.startsWith('-')) throw new Error(`Unknown option ${a}`);
     else args._.push(a);
   }
@@ -76,16 +84,18 @@ function openFile(file) {
   spawn(cmd, args, { detached: true, stdio: 'ignore', windowsHide: true }).unref();
 }
 
-async function runSteps(dir, from = 'audio', { open } = {}) {
+async function runSteps(dir, from = 'audio', { open, voice, rate } = {}) {
   const start = STEPS.indexOf(from);
   if (start < 0) throw new Error(`--from must be one of ${STEPS.join(', ')}`);
+  // Why: the voice is made only in the audio step; skipping it would silently keep the old voice.
+  if ((voice || rate !== undefined) && start > 0) throw new Error('--voice and --rate change the audio step, so they cannot be used with --from record, render or verify');
   const kit = require('../index');
   const t0 = Date.now();
   let warnings = [], checked;
   for (const [i, step] of STEPS.entries()) {
     if (i < start) continue;
     console.log(`\n▶ ${i + 1}/4 ${step}`);
-    if (step === 'audio') await kit.generateAudio(dir);
+    if (step === 'audio') await kit.generateAudio(dir, { voice, rate });
     if (step === 'record') warnings = kit.record(dir).warnings;
     if (step === 'render') kit.render(dir);
     if (step === 'verify') checked = kit.verify(dir);
@@ -165,7 +175,7 @@ Next: rewrite the say: lines in ${rel}/demo.yaml, then
       return r;
     }
     case 'doctor': return doctor();
-    case 'audio': return kit().generateAudio(demoDir(target));
+    case 'audio': return kit().generateAudio(demoDir(target), { voice: args.voice, rate: args.rate });
     case 'record': return kit().record(demoDir(target));
     case 'render': return kit().render(demoDir(target));
     case 'verify': { const r = kit().verify(demoDir(target)); if (!r.ok) process.exitCode = 1; return r; }
@@ -173,7 +183,7 @@ Next: rewrite the say: lines in ${rel}/demo.yaml, then
     case 'voices': {
       const voices = await kit().listVoices(target || '');
       for (const v of voices) console.log(`${v.ShortName.padEnd(36)} ${v.Gender.padEnd(7)} ${v.Locale}`);
-      return console.log(`\n${voices.length} voice(s). Use one as "voice" in narration.json.`);
+      return console.log(`\n${voices.length} voice(s). Use one as "voice:" in demo.yaml (or narration.json), or try it with "run <demo> --voice <name>".`);
     }
     default: throw new Error(`Unknown command "${cmd}". Run "demo-video-kit help".`);
   }
